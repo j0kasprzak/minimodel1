@@ -1,0 +1,53 @@
+# odpal git basha w danym folderze
+# 1. inicjacja repozytorium
+git init
+
+# 2. sprawdzenie ustawień lokalnych
+git config --list --show-origin
+# jeśli będzie trzeba modyfikować mail lub nazwę użytkownika:
+# git config --global user.name <nazwa użytkownika na githubie>
+# git config --global user.email <adres mailowy do konta na githubie>
+
+# 3. sprawdzenie statusu repozytorium
+git status # nic się nie powinno dziać
+
+# 4. łączenie z repozytorium
+git remote add origin https://github.com/j0kasprzak/minimodel1.git
+git remote set-url origin https://github.com/j0kasprzak/minimodel1.git
+git remote -v # do sprawdzenia połączenia
+
+# 5. piersze pobranie repozytorium
+git pull origin master
+git status # powinniśmy dostać info, że nie mamy co commitować
+
+
+# 6. dodawanie plików
+git add <nazwa pliku> lub git add --all (dodaje wszystkie pliki)
+git commit -m <'komentarz'>
+git push --set-upstream origin master (wrzucanie plików do repozytorium po raz pierwszy)
+git push origin master (wszucanie plików do repozytorium)
+git status
+
+# 7. usuwanie plików
+git rm <nazwa pliku> --cached # usuwa tylko z repozytorium
+git rm <nazwa pliku> # usuwa z repozytorium i lokalnie
+git commit -m <'komentarz'>
+git push
+
+
+# 8. obsługa
+# przy każdym wykorzystaniu najpierw należy ściągnąć pliki wgrane przez innych użytkowników
+git pull origin master
+# następnie należy dodać swoje zmiany
+git add --all
+# potem wykonujemy commit zmian
+git commit -m <'komentarz'>
+# ostatecznie wgrywamy pliki do repozytorium
+git push origin master
+
+
+# 9. uwagi
+<> oznacza, że w środku należy coś wpisać, usuwając jednocześnie te znaki, przykład poniżej
+git commit -m <'komentarz'> zastępujemy w rzeczywistości git commit -m 'pierwszy commit'
+w każdym momencie możesz sprawdzić status repozytorium komendą git status
+
