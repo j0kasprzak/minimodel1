@@ -9,6 +9,7 @@ library(xts)
 library(dplyr)
 library(openxlsx)
 library(tidyverse)
+
 #setwd("C:\\Users\\DELL\\OneDrive\\Pulpit\\UW\\Zaawansowana Ekonometria II")
 dane<-read.xlsx("Dane do pierwszego modelu.xlsx")
 Dane_do_pierwszego_modelu <- dane
