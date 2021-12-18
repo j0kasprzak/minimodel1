@@ -55,7 +55,6 @@ uur<-function(df){
         Wyniki[i,6] = summary(ur.pp(diff(log(df[,i])), model="constant"))@teststat[1]
         summary(ur.df(log(df[,1])))@teststat
       }
-
   return(Wyniki)
 }
 
