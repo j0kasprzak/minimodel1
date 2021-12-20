@@ -10,6 +10,8 @@ library(dplyr)
 library(openxlsx)
 library(tidyverse)
 
+source('functions.R')
+
 #setwd("C:\\Users\\DELL\\OneDrive\\Pulpit\\UW\\Zaawansowana Ekonometria II")
 dane<-read.xlsx("Dane do pierwszego modelu.xlsx")
 Dane_do_pierwszego_modelu <- dane
@@ -17,12 +19,16 @@ Dane_do_pierwszego_modelu$data<-seq(as.Date("1990/1/1"), as.Date("2021/7/1"), by
 str(Dane_do_pierwszego_modelu$data)
 #Podzielenie krajow na oddzielne datasety
 kraje <- c('pl', 'fr', 'ger', 'uk', 'nl', 'dmk')
+kraje1 <- c('Polska', 'Francja', 'Niemcy', 'Wielka Brytania', 'Holandia', 'Dania')
 data <- list()
 for (x in kraje) {
-  data[[x]] <- Dane_do_pierwszego_modelu %>% select(paste0(c('oil_price_', 'ree_'), x)) %>% 
+  data[[x]] <- Dane_do_pierwszego_modelu %>% dplyr::select(paste0(c('oil_price_', 'ree_'), x)) %>% 
     rename_all(function(x) gsub('_','',substr(x, 1, nchar(x)-3))) %>%
-    mutate(oilprice_r = diff.xts(log(oilprice))) %>% mutate(ree_l=diff.xts(log(ree))) %>% 
-    mutate(date = seq(as.Date("1990/1/1"), as.Date("2021/7/1"), by = "quarter"))
+    mutate(oilprice_r = diff.xts(log(oilprice))) %>% mutate(ree_r=diff.xts(log(ree))) %>% 
+    mutate(date = seq(as.Date("1990/1/1"), as.Date("2021/7/1"), by = "quarter")) %>%
+    mutate(D08=as.numeric(date<='2008/12/31' & date>='2007/10/1')) %>%
+    mutate(D20=as.numeric(date<='2020/9/30' & date>='2020/1/1'))
+    
 }
 par(mfrow = c(3,2))
 par(mar=c(5, 4, 4, 6) + 0.1)
@@ -39,26 +45,6 @@ for (x in kraje) {
 Wyniki <- matrix(data=NA, nrow = 12, ncol = 2)
 colnames(Wyniki)<- c("Bez Trendu  ", "Z trendem")
 
-df <- polska
-uur<-function(df){
-  Wyniki <- matrix(data=NA, nrow = 2, ncol = 6)
-  colnames(Wyniki)<- c("Bez Trendu  ", "Z trendem", "F.diff", "PP bez trendu  ", "PP z trendem  " ," F.diff PP")
-  oil_p<-names(df)[1]
-  ree<-names(df)[2]
-  rownames(Wyniki)<-c(oil_p, ree)
-
-  for (i in names(df)[1:2]){
-        Wyniki[i,1] = summary(ur.df(log(df[,i]), type = "none", selectlags = c("BIC")))@teststat[1]
-        Wyniki[i,2] = summary(ur.df(log(df[,i]), type = "trend", selectlags = c("BIC")))@teststat[1]
-        Wyniki[i,3] = summary(ur.df(diff(log(df[,i])), type = "none", selectlags = c("BIC")))@teststat[1]
-        Wyniki[i,4] = summary(ur.pp(diff(log(df[,i])), model="constant"))@teststat[1]
-        Wyniki[i,5] = summary(ur.pp(diff(log(df[,i])), model="trend"))@teststat[1]
-        Wyniki[i,6] = summary(ur.pp(diff(log(df[,i])), model="constant"))@teststat[1]
-        summary(ur.df(log(df[,1])))@teststat
-      }
-  return(Wyniki)
-}
-
 for (i in 1:6) {
   cat(str_to_upper(names(data)[i])) 
   uur(data[[i]]) %>% print
@@ -66,53 +52,10 @@ for (i in 1:6) {
 }
 
 # test ADF od Dzik
-testdf <- function(variable, adf_order) {
-  results_adf <- data.frame(order = -1,
-                            adf = 0,
-                            p_adf = "",
-                            bgodfrey = 0, p_bg = 0)
-  variable <- variable[!is.na(variable)]
-  
-  for (order in 0:adf_order) {
-    df.test_ <- ur.df(variable, type = c("drift"), lags = order)
-    df_ <- df.test_@teststat[1]
-    df_crit <- df.test_@cval[1, ]
-    df_crit <- (df_ < df_crit) * 1
-    p_adf <- ifelse(sum(df_crit) == 0,
-                    ">10pct",
-                    paste("<",
-                          names(df_crit)[min(which(df_crit == 1))],
-                          sep = "")
-    )
-    
-    resids_ <- df.test_@testreg$residuals
-    bgtest_ <- bgtest(resids_ ~ 1, order = 1)
-    bgodfrey <- bgtest_$statistic
-    names(bgodfrey) <- NULL
-    p_bg <- bgtest_$p.value
-    
-    results_adf <- rbind(results_adf,
-                         data.frame(order = order,
-                                    adf = df_,
-                                    p_adf = p_adf,
-                                    bgodfrey = bgodfrey,
-                                    p_bg = p_bg)
-    )
-  }
-  
-  results_adf <- results_adf[results_adf$order >= 0, ]
-  
-  plot(variable,
-       type = "l",
-       col = "blue",
-       lwd = 2,
-       main = "Plot of the examined variable")
-  
-  return(results_adf)
-}
+
 library(lmtest)
 dev.off()
-testdf(diff(log(polska$oil_price_pl)), 2)
+testdf(diff(log(data[['pl']]$oilprice)), 2)
 
 # testy na kointegrację
 library(dynlm)
@@ -122,5 +65,60 @@ for (x in names(data)) {
   ur.df(resid(obj), lags = 6, type = "none", selectlags = "AIC") %>% print
 }
 
-#
+# VAR models -> Granger nonlinear casuality test
+library(vars)
+VARselect(data[[1]][-1,3:4], lag.max=8,
+          type="const")[["selection"]]
+var1 <- VAR(data[[2]][-1,3:4], p=1, type="const")
+summary(var1)
+test <- serial.test(var1, lags.pt=2, type="PT.asymptotic")
+test <- serial.test(var1, lags.bg=2, type="BG")
 
+resid(var1)
+
+library(SDD)
+
+
+# 7 summary statistics
+library(e1071)
+calcutalate_stats <- function(x) {
+  returns <-  diff(log(x))
+  stat <- ur.df(returns)@teststat[1]
+  pval <- pnorm(stat) %>% round(.,5)
+  x <- diff(log(x))*100
+  return(c(mean(x), median(x), max(x), min(x), sd(x), skewness(x), kurtosis(x), pval, length(x)))
+}
+sum_stats <- NULL
+for (x in c('ree', 'oilprice')) {
+  for (y in names(data)) {
+    ret <- calcutalate_stats(data[[y]][x] %>% unlist)
+    sum_stats <- sum_stats %>% cbind(ret) %>% as.data.frame %>% 
+      rename_with(.cols=last_col(), .fn=function(name) paste(x,y,sep='_'))
+  }
+}
+rownames(sum_stats) <- c('Mean', 'Median', 'Maximum', 'Minimum', 'Std. Dev', 'Skewness', 'Kurtosis', 'Probability', 'n')
+
+# return ploty
+dev.off()
+par(mfrow = c(3,2))
+par(mar=c(4, 4, 1, 2) + 0.1)
+for (x in kraje) {
+  plot(data[[x]]$date[-1],data[[x]]$oilprice_r[-1], type = "l",col="green",xlab = "", ylab = "")
+  lines(data[[x]]$date[-1],data[[x]]$ree_r[-1], type = "l",col="red")
+  #plot(data[[x]]$date[-1], data[[x]]$ree_r[-1], type='l', col='red')
+  #par(new = TRUE)
+  #plot(data[[x]]$date[-1],data[[x]]$oilprice_r[-1], type = "l",col="green", axes = FALSE, bty = "n", xlab = "", ylab = "")
+  #axis(side=4, at = pretty(range(data[[x]]$oilprice_r[-1])))  
+  mtext('returns', side=2, line=2.5)
+  mtext(kraje1[which(kraje==x)], side=1, line=2.5)
+}
+
+# 8 OLS and quantile regression models
+# olsy
+lm(ree_r~oilprice_r+D08+D20,data[[1]][-1,] %>% mutate(oilprice_r=oilprice_r*100, ree_r=ree_r*100)) %>% summary
+library(quantreg)
+rq(ree_r~oilprice_r+D08+D20, tau = 0.5, data=data[[1]][-1,] %>% mutate(oilprice_r=oilprice_r*100, ree_r=ree_r*100)) %>% summary
+obj <-rq(ree_r~oilprice_r+D08+D20, tau = 0.5, data=data[[1]][-1,] %>% mutate(oilprice_r=oilprice_r*100, ree_r=ree_r*100))
+summary(obj, se = "boot")
+obj <-rq(ree_r~oilprice_r+D08+D20, tau = 0.5, data=data[[1]][-1,] %>% mutate(oilprice_r=oilprice_r*100, ree_r=ree_r*100)) %>% summary
+obj$terms
