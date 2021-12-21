@@ -43,16 +43,23 @@ for (x in kraje) {
     mutate(oilprice_r_n = r_asym(oilprice_r, 'minus')*100)
     
 }
+dev.off()
+png(file="log_time_series_plot.png", height = 700, width = 700)
 par(mfrow = c(3,2))
-par(mar=c(5, 4, 4, 6) + 0.1)
+par(mar=c(3, 4, 3, 4) + 0.1)
+i=1
 for (x in kraje) {
-  plot(data[[x]]$date, log(data[[x]]$ree), type='l', col='red')
+  plot(data[[x]]$date, log(data[[x]]$ree), type='l', col='red', xlab='', ylab='')
   par(new = TRUE)
   plot(data[[x]]$date,log(data[[x]]$oilprice), type = "l",col="green", axes = FALSE, bty = "n", xlab = "", ylab = "")
   axis(side=4, at = pretty(range(log(data[[x]]$oilprice))))  
-  mtext("oil prize", side=4, line=3)
+  mtext("oil prize", side=4, line=2.5)
+  mtext("interest rate", side=2, line=2.5)
+  
+  mtext(kraje1[i], side=3, line=1)
+  i <- i+1
 }
-
+dev.off()
 
 #testy na obecność pierwiastka jednostkowego
 Wyniki <- matrix(data=NA, nrow = 12, ncol = 2)
@@ -113,8 +120,9 @@ rownames(sum_stats) <- c('Mean', 'Median', 'Maximum', 'Minimum', 'Std. Dev', 'Sk
 
 # return ploty
 dev.off()
+png(file="returns_plot.png", height = 700, width = 700)
 par(mfrow = c(3,2))
-par(mar=c(4, 4, 1, 2) + 0.1)
+par(mar=c(3, 4, 2.5, 2) + 0.1)
 for (x in kraje) {
   plot(data[[x]]$date[-1],data[[x]]$oilprice_r[-1], type = "l",col="green",xlab = "", ylab = "")
   lines(data[[x]]$date[-1],data[[x]]$ree_r[-1], type = "l",col="red")
@@ -123,9 +131,9 @@ for (x in kraje) {
   #plot(data[[x]]$date[-1],data[[x]]$oilprice_r[-1], type = "l",col="green", axes = FALSE, bty = "n", xlab = "", ylab = "")
   #axis(side=4, at = pretty(range(data[[x]]$oilprice_r[-1])))  
   mtext('returns', side=2, line=2.5)
-  mtext(kraje1[which(kraje==x)], side=1, line=2.5)
+  mtext(kraje1[which(kraje==x)], side=3, line=0.5)
 }
-
+dev.off()
 # 8 OLS and quantile regression models
 # olsy
 lm(ree_r~oilprice_r+D08+D20,data[[1]][-1,] %>% mutate(oilprice_r=oilprice_r*100, ree_r=ree_r*100)) %>% summary
@@ -188,6 +196,7 @@ for (x in kraje) {
 }
 plot_stats[[6]]  
 dev.off()
+png(file="8_estymacja.png", height = 700, width = 700)
 par(mfrow = c(3,2))
 par(mar=c(3, 4, 2.5, 2) + 0.1)
 
@@ -199,7 +208,7 @@ for (x in names(plot_stats)) {
   
   plot(qr_coef ~ tau, data = df, type = 'n', ylim=c(min-0.01, max+(max-min)/3.5), ylab='coef', xlab='')
   # add fill
-  legend('topleft', inset=0.01, c('Estymator regresji kwantylowej', 'Estymator MNK'), lty = c(1,1), col = c('black', 'blue'), box.lty=0, y.intersp = 0.85, cex = 0.85)
+  legend('topleft', inset=0.01, c('Estymator regresji kwantylowej', 'Estymator MNK'), lty = c(1,1), col = c('black', 'blue'), box.lty=0, y.intersp = 0.85, cex = 0.95)
   polygon(c(rev(df$tau), df$tau), c(rev(df$qr_up), df$qr_down), col = 'grey90', border = NA)
   lines(qr_coef ~ tau, data = df, type = 'l', lwd=1)
   lines(qr_coef ~ tau, data = df, type = 'b', lwd=1, pch = 18)
@@ -209,7 +218,7 @@ for (x in names(plot_stats)) {
   mtext(kraje1[which(kraje==x)], side=3, line=0.5)
   mtext('tau', side=1, line=2, cex=0.8)
 }
-
+dev.off()
 # 9 Quantile slope equality F test
 df_qr_test <- data.frame(Country=rep(kraje1, each=3)) %>%
   mutate(Variable = rep(c('Pot', 'D08', 'D20'), length(kraje))) %>%
@@ -319,10 +328,11 @@ for (x in kraje) {
                                  'ols_coef_n', 'ols_down_n', 'ols_up_n', 'qr_coef_n', 'qr_down_n', 'qr_up_n')
 }
 plot_stats_asm[[6]]  
+
 dev.off()
+png(file="10_asymetryczny_p.png", height = 700, width = 700)
 par(mfrow = c(3,2))
 par(mar=c(3, 4, 2.5, 2) + 0.1)
-
 # plot
 for (x in names(plot_stats_asm)) {
   df <- plot_stats_asm[[x]]
@@ -342,7 +352,11 @@ for (x in names(plot_stats_asm)) {
   mtext('POS_RPO', side=3, line=0.3, cex = 0.5, at=0.2)
   mtext('tau', side=1, line=2, cex=0.8)
 }
+dev.off()
 
+png(file="10_asymetryczny_n.png", height = 700, width = 700)
+par(mfrow = c(3,2))
+par(mar=c(3, 4, 2.5, 2) + 0.1)
 for (x in names(plot_stats_asm)) {
   df <- plot_stats_asm[[x]]
   max <- max(as.matrix(df[,8:13]))
@@ -361,6 +375,7 @@ for (x in names(plot_stats_asm)) {
   mtext('NEG_RPO', side=3, line=0.3, cex = 0.5, at=0.2)
   mtext('tau', side=1, line=2, cex=0.8)
 }
+dev.off()
 
 #11 quanlite slope test
 df_qr_test_asm <- data.frame(Country=rep(kraje1, each=4)) %>%
@@ -399,9 +414,6 @@ for (x in kraje) {
   i <- i+1
 }
 
-#q_reg <- rq(ree_r~oilprice_r_p+oilprice_r_n+D08+D20, tau = c(0.1,0.5), data=data[[x]][-1,] %>% mutate(ree_r=ree_r*100))
-#obj <-anova(q_reg, test = "Wald", joint=F)
-#df_qr_test_asm[df_qr_test_asm$Country==kraj,11] <- round(obj$table$pvalue,4)
 
 i=1
 set.seed(1)
@@ -451,3 +463,18 @@ for (x in kraje) {
   iter=0
   i<- i+1
 }
+
+
+wb <- createWorkbook()
+addWorksheet(wb, '7_summary_stats')
+writeData(wb, '7_summary_stats', sum_stats, rowNames = T)
+addWorksheet(wb, '8_Estimation')
+writeData(wb, '8_Estimation', df_ols_qr)
+addWorksheet(wb, '9_Slope_test')
+writeData(wb, '9_Slope_test', df_qr_test)
+addWorksheet(wb, '10_Asimetric_model')
+writeData(wb, '10_Asimetric_model', df_ols_qr_asm)
+addWorksheet(wb, '11_Asimetric_slope_test')
+writeData(wb, '11_Asimetric_slope_test', df_qr_test_asm)
+saveWorkbook(wb, 'analysis_7_11.xlsx')
+
